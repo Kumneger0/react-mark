@@ -3,16 +3,18 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbo",
-    "build": "next build",
+    "dev": "fiker dev",
+    "build": "pnpm run build:client && pnpm run build:server",
+    "build:client": "vite build --ssrManifest --outDir dist/client",
+    "build:server": "vite build --ssr src/server-entry.tsx --outDir dist/server",
     "start": "next start",
     "lint": "next lint"
   },
   "dependencies": {
-    "@repo/ui": "workspace:*",
-    "next": "14.2.6",
+    "@repo/fiker": "workspace:*",
     "react": "18.3.1",
-    "react-dom": "18.3.1"
+    "react-dom": "18.3.1",
+    "vite": "^5.4.10"
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
@@ -23,5 +25,9 @@
     "eslint": "^8",
     "eslint-config-next": "14.2.6",
     "typescript": "5.5.4"
+  },
+  "overrides": {
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
   }
 }

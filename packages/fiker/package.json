@@ -1,0 +1,56 @@
+{
+  "name": "@repo/fiker",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./link": "./src/link.tsx"
+  },
+  "bin": {
+    "fiker": "./src/index.ts"
+  },
+  "peerDependencies": {
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  },
+  "scripts": {
+    "lint": "eslint . --max-warnings 0",
+    "generate:component": "turbo gen react-component",
+    "build": "nodemon --watch . --watch test --ext ts,json --exec 'rm -rf dist && swc ./src -d dist'"
+  },
+  "devDependencies": {
+    "@koa/router": "^13.1.0",
+    "@repo/eslint-config": "workspace:*",
+    "@repo/typescript-config": "workspace:*",
+    "@swc/cli": "0.4.1-nightly.20240914",
+    "@swc/core": "^1.7.40",
+    "@turbo/gen": "^1.12.4",
+    "@types/eslint": "^8.56.5",
+    "@types/koa": "^2.15.0",
+    "@types/koa-mount": "^4.0.5",
+    "@types/koa-static": "^4.0.4",
+    "@types/koa__router": "^12.0.4",
+    "@types/node": "^22.8.1",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "eslint": "^8.57.0",
+    "nodemon": "^3.1.7",
+    "tsup": "^8.3.5",
+    "typescript": "5.5.4"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.13.2",
+    "@hono/vite-dev-server": "^0.16.0",
+    "@vitejs/plugin-react": "^4.3.3",
+    "hono": "^4.6.7",
+    "koa": "^2.15.3",
+    "koa-connect": "^2.1.0",
+    "koa-mount": "^4.0.0",
+    "koa-static": "^5.0.0",
+    "vite": "^5.4.10"
+  },
+  "overrides": {
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  }
+}
