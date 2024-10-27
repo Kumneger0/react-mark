@@ -16,8 +16,8 @@ async function hydrate() {
         "failed to find the page you are looking for if this was mistake please open an issue in our github page"
       );
     }
-    const App = await import(appPath).then((module) => module.default);
-    hydrateRoot(document.getElementById("root")!, <App />);
+    // const App = await import(appPath).then((module) => module.default);
+    // hydrateRoot(document.getElementById("root")!, <App />);
   }
 }
 

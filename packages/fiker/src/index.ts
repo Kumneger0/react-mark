@@ -16,6 +16,10 @@ import serve from "koa-static";
 import { createRequire } from "module";
 import type { PipeableStream } from "react-dom/server";
 import { PassThrough } from "stream";
+import { MarkdownContent } from "./utils/markdownContent.js";
+import { createElement } from "react";
+import matter from "gray-matter";
+import Handlebars from "handlebars";
 
 const req = createRequire(import.meta.url);
 const koaConnect = req("koa-connect");
@@ -35,9 +39,12 @@ async function createServer() {
   app.use(mount("/__static__", serve(staticDir)));
   const basePath = path.join(process.cwd(), "src/app");
   const routesMap = buildRoutesMap(basePath);
+
+  console.log(routesMap);
+
   const router = new Router();
   const root = process.cwd();
-  const isProduction = true;
+  const isProduction = process.env.NODE_ENV == "production";
 
   let template = isProduction
     ? await fs.promises.readFile(
@@ -55,6 +62,11 @@ async function createServer() {
   router.get(/.*/, async (ctx) => {
     try {
       const url = ctx.req.url;
+
+      if (!url) {
+        throw Error("failed to determine the path you are looking for");
+      }
+
       const pathName = routesMap.get(url);
 
       if (!pathName) {
@@ -62,11 +74,6 @@ async function createServer() {
         return;
       }
 
-      if (!url) {
-        throw Error("failed to determine the path you are looking for");
-      }
-
-      template = await vite.transformIndexHtml(url, template);
       const { render } = isProduction
         ? await import(path.resolve(root, "dist/server/server-entry.mjs"))
         : ((await runtime.executeEntrypoint(
@@ -78,14 +85,34 @@ async function createServer() {
             ) => Promise<PipeableStream>;
           });
 
-      const { default: App } = (await runtime.executeEntrypoint(pathName)) as {
-        default: React.FC<{}>;
-      };
+      let App: React.FC;
+
+      if (pathName.endsWith(".mdx")) {
+        const mdxString = fs.readFileSync(pathName, "utf-8");
+        const { content, data: frontMatter } = matter(mdxString);
+        App = () => MarkdownContent({ markdown: content });
+
+        const comipledTemplate = Handlebars.compile(template);
+
+        template = comipledTemplate({
+          title: frontMatter.title,
+          description: frontMatter.description,
+        });
+      } else {
+        const { default: Page } = (await runtime.executeEntrypoint(
+          pathName
+        )) as {
+          default: React.FC<{}>;
+        };
+
+        App = Page;
+      }
 
       const appHtml = (await render(App, pathName)) as PipeableStream;
 
       ctx.type = "text/html";
       const passThrough = new PassThrough();
+      template = await vite.transformIndexHtml(url, template);
 
       const [before, after] = template.split("<!--ssr-outlet-->");
 
@@ -118,7 +145,7 @@ async function createServer() {
 
   app.use(router.routes()).use(router.allowedMethods());
 
-  const port = 3001;
+  const port = 3000;
   const server = app.listen(port, () =>
     console.log(`Server running at http://localhost:${port}`)
   );
@@ -144,7 +171,7 @@ async function createServer() {
 createServer();
 
 function buildRoutesMap(dir: string, basePath = "") {
-  const routesMap = new Map();
+  const routesMap = new Map<string, string>();
 
   function traverse(currentDir: string, currentRoute: string) {
     const files = fs.readdirSync(currentDir);
@@ -154,12 +181,16 @@ function buildRoutesMap(dir: string, basePath = "") {
       const fileStat = fs.statSync(fullPath);
 
       if (fileStat.isDirectory()) {
+        // Recurse into subdirectories
         traverse(fullPath, `${currentRoute}/${file}`);
-      } else if (file.endsWith(".tsx")) {
+      } else if (file.endsWith(".tsx") || file.endsWith(".mdx")) {
+        // Determine route path
         const routePath =
           file === "page.tsx"
             ? currentRoute || "/"
-            : `${currentRoute}/${file.replace(/\.tsx$/, "")}`;
+            : `${currentRoute}/${file.replace(/\.(tsx|mdx)$/, "")}`;
+
+        // Add route to the map
         routesMap.set(routePath, fullPath);
       }
     }
