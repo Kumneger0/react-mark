@@ -10,8 +10,8 @@
     "fiker": "./src/index.ts"
   },
   "peerDependencies": {
-    "react": "18.3.1",
-    "react-dom": "18.3.1"
+    "react": "19.0.0-beta-26f2496093-20240514",
+    "react-dom": "19.0.0-beta-26f2496093-20240514"
   },
   "scripts": {
     "lint": "eslint . --max-warnings 0",
@@ -58,9 +58,5 @@
     "remark-rehype": "^11.1.1",
     "unified": "^11.0.5",
     "vite": "^5.4.10"
-  },
-  "overrides": {
-    "react": "18.3.1",
-    "react-dom": "18.3.1"
   }
 }

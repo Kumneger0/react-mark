@@ -12,8 +12,8 @@
   },
   "dependencies": {
     "@repo/fiker": "workspace:*",
-    "react": "18.3.1",
-    "react-dom": "18.3.1",
+    "react": "19.0.0-beta-26f2496093-20240514",
+    "react-dom": "19.0.0-beta-26f2496093-20240514",
     "vite": "^5.4.10"
   },
   "devDependencies": {
@@ -25,9 +25,5 @@
     "eslint": "^8",
     "eslint-config-next": "14.2.6",
     "typescript": "5.5.4"
-  },
-  "overrides": {
-    "react": "18.3.1",
-    "react-dom": "18.3.1"
   }
 }

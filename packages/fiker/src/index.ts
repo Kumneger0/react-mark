@@ -2,27 +2,25 @@
 import Koa from "koa";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
-import {
-  build,
-  createViteRuntime,
-  createServer as createViteServer,
-} from "vite";
+import { createViteRuntime, createServer as createViteServer } from "vite";
 
 import Router from "@koa/router";
 import react from "@vitejs/plugin-react";
 import * as fs from "fs";
+import matter from "gray-matter";
+import Handlebars from "handlebars";
 import mount from "koa-mount";
 import serve from "koa-static";
 import { createRequire } from "module";
 import type { PipeableStream } from "react-dom/server";
 import { PassThrough } from "stream";
 import { MarkdownContent } from "./utils/markdownContent.js";
-import { createElement } from "react";
-import matter from "gray-matter";
-import Handlebars from "handlebars";
+import { ViteRuntime } from "vite/runtime";
 
 const req = createRequire(import.meta.url);
 const koaConnect = req("koa-connect");
+
+export let viteRuntime: ViteRuntime;
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const staticDir = path.join(__dirname, "__static__");
@@ -33,7 +31,7 @@ async function createServer() {
     appType: "custom",
     plugins: [react()],
   });
-  const runtime = await createViteRuntime(vite);
+  const viteRuntime = await createViteRuntime(vite);
   const app = new Koa();
   app.use(koaConnect(vite.middlewares));
   app.use(mount("/__static__", serve(staticDir)));
@@ -59,6 +57,13 @@ async function createServer() {
       )
     : undefined;
 
+  // router.get("/getssr", async (ctx) => {
+  //   const pathname = ctx.query.pathname;
+  //   const fullpath = routesMap.get(pathname)
+  //   ctx.body = fullpath
+
+  // });
+
   router.get(/.*/, async (ctx) => {
     try {
       const url = ctx.req.url;
@@ -76,7 +81,7 @@ async function createServer() {
 
       const { render } = isProduction
         ? await import(path.resolve(root, "dist/server/server-entry.mjs"))
-        : ((await runtime.executeEntrypoint(
+        : ((await viteRuntime.executeEntrypoint(
             path.resolve(root, "src/server-entry.tsx")
           )) as {
             render: (
@@ -99,7 +104,7 @@ async function createServer() {
           description: frontMatter.description,
         });
       } else {
-        const { default: Page } = (await runtime.executeEntrypoint(
+        const { default: Page } = (await viteRuntime.executeEntrypoint(
           pathName
         )) as {
           default: React.FC<{}>;
@@ -181,16 +186,13 @@ function buildRoutesMap(dir: string, basePath = "") {
       const fileStat = fs.statSync(fullPath);
 
       if (fileStat.isDirectory()) {
-        // Recurse into subdirectories
         traverse(fullPath, `${currentRoute}/${file}`);
       } else if (file.endsWith(".tsx") || file.endsWith(".mdx")) {
-        // Determine route path
         const routePath =
           file === "page.tsx"
             ? currentRoute || "/"
             : `${currentRoute}/${file.replace(/\.(tsx|mdx)$/, "")}`;
 
-        // Add route to the map
         routesMap.set(routePath, fullPath);
       }
     }
