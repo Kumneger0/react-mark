@@ -43,6 +43,7 @@
     "@hono/vite-dev-server": "^0.16.0",
     "@vitejs/plugin-react": "^4.3.3",
     "gray-matter": "^4.0.3",
+    "h3": "^1.13.0",
     "handlebars": "^4.7.8",
     "hono": "^4.6.7",
     "koa": "^2.15.3",

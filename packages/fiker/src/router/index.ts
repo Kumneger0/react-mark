@@ -1,4 +1,22 @@
-import { routeChanged } from "../link";
+import React from "react";
+import { Root } from "react-dom/client";
+
+export let RouterContext: React.Context<{ root: Root | undefined }> | undefined;
+
+//@ts-ignore
+if (!import.meta.env?.SSR) {
+  RouterContext = React.createContext<{ root: Root | undefined }>({
+    root: undefined,
+  });
+}
+
+let routeChanged: CustomEvent<unknown>;
+let updatePageEvent: CustomEvent<unknown>;
+
+if (typeof window !== "undefined") {
+  routeChanged = new CustomEvent("routeChanged");
+  updatePageEvent = new CustomEvent("updatePage");
+}
 
 interface FikerRouterInstance {
   /**
@@ -29,27 +47,27 @@ interface FikerRouterInstance {
 const push = (url: string) => {
   if (typeof window !== undefined) {
     window.history.pushState({}, "", url);
-    window.dispatchEvent(routeChanged);
+    window.dispatchEvent(updatePageEvent);
   }
 };
 
 const replace = (url: string) => {
   if (typeof window !== undefined) {
     window.history.replaceState({}, "", url);
-    window.dispatchEvent(routeChanged);
+    window.dispatchEvent(updatePageEvent);
   }
 };
 
 const back = () => {
   if (typeof window !== undefined) {
     window.history.back();
-    window.dispatchEvent(routeChanged);
+    window.dispatchEvent(updatePageEvent);
   }
 };
 const forward = () => {
   if (typeof window !== undefined) {
     window.history.forward();
-    window.dispatchEvent(routeChanged);
+    window.dispatchEvent(updatePageEvent);
   }
 };
 
@@ -61,14 +79,3 @@ export const useRouter = (): FikerRouterInstance => {
     forward,
   };
 };
-
-// if (typeof window !== undefined) {
-//   window?.addEventListener("routeChanged", async (e) => {
-//     const pathname = window.location.pathname;
-//     const response = await fetch(`/getssr?pathname=${pathname}`);
-//     const filePath = await response.text();
-//     const { default: App } = await import(filePath);
-//     window?.App = App;
-//     window?.dispatchEvent(updatePageEvent);
-//   });
-// }

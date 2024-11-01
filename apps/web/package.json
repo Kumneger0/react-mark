@@ -4,11 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "fiker dev",
-    "build": "pnpm run build:client && pnpm run build:server",
-    "build:client": "vite build --ssrManifest --outDir dist/client",
-    "build:server": "vite build --ssr src/server-entry.tsx --outDir dist/server",
-    "start": "next start",
-    "lint": "next lint"
+    "build": "fiker build",
+    "start": "fiker start",
+    "lint": "fiker lint"
   },
   "dependencies": {
     "@repo/fiker": "workspace:*",
