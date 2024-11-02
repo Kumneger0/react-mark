@@ -4,10 +4,10 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./link": "./src/link.tsx"
+    "./link": "./dist/src/link.js"
   },
   "bin": {
-    "fiker": "./src/index.ts"
+    "fiker": "./dist/src/index.js"
   },
   "peerDependencies": {
     "react": "19.0.0-beta-26f2496093-20240514",

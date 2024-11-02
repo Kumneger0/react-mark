@@ -29,6 +29,15 @@ export function buildRoutesMap(dir: string, basePath = "") {
   return routesMap;
 }
 
+export function getFilePathFromRoute(
+  pathname: string,
+  rootDir: string
+): string {
+  const normalizedPath =
+    pathname === "/" ? "/page.tsx" : `${pathname}/page.tsx`;
+  return path.join(rootDir, normalizedPath);
+}
+
 export const ContextProvider = <T,>({
   contexts,
   children,

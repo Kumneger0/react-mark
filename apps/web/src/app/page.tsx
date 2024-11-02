@@ -39,6 +39,7 @@ export default function Home() {
         >
           Fiker
         </h1>
+        <title>this is title</title>
         <p
           style={{
             fontSize: "1.5rem",

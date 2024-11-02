@@ -1,54 +1,41 @@
 #!/usr/bin/env tsx
-import Koa from "koa";
-import * as path from "node:path";
-import { fileURLToPath } from "node:url";
-import {
-  createViteRuntime,
-  createServer as createViteServer,
-  build,
-} from "vite";
-
-import { spawnSync } from "child_process";
-
 import Router from "@koa/router";
 import react from "@vitejs/plugin-react";
 import * as fs from "fs";
 import matter from "gray-matter";
 import Handlebars from "handlebars";
+import Koa from "koa";
 import mount from "koa-mount";
 import serve from "koa-static";
 import { createRequire } from "module";
+import * as path from "node:path";
+import { fileURLToPath } from "node:url";
 import type { PipeableStream } from "react-dom/server";
 import { PassThrough } from "stream";
-import { ViteRuntime } from "vite/runtime";
-import { MarkdownContent } from "../utils/markdownContent";
-import { buildRoutesMap } from "../utils/utils";
+import { createViteRuntime, createServer as createViteServer } from "vite";
+import { MarkdownContent } from "../utils/markdownContent.js";
+import { buildRoutesMap, getFilePathFromRoute } from "../utils/utils.js";
 
 const req = createRequire(import.meta.url);
 const koaConnect = req("koa-connect");
-
-export let viteRuntime: ViteRuntime;
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const staticDir = path.join(__dirname, "__static__");
 
 const isProduction = process.env.NODE_ENV == "production";
 
-const clientEntry = path.resolve(
-  __dirname,
-  `${isProduction ? "../utils/client-entry.js" : "../utils/client-entry.tsx"}`
-);
+const clientEntry = path.resolve(__dirname, `../utils/client-entry.js`);
 
 export async function createServer() {
   const vite = await createViteServer({
     server: { middlewareMode: true },
     appType: "custom",
-    plugins: [react({ include: "mdx" })],
+    plugins: [react()],
     build: {
       ssrManifest: true,
       ssr: true,
       rollupOptions: {
-        input: path.resolve(__dirname, "../utils/server-entry.tsx"),
+        input: path.resolve(__dirname, "../utils/server-entry.js"),
       },
     },
   });
@@ -58,7 +45,7 @@ export async function createServer() {
   app.use(koaConnect(vite.middlewares));
   app.use(mount("/__static__", serve(staticDir)));
   const basePath = path.join(process.cwd(), "src/app");
-  const routesMap = buildRoutesMap(basePath);
+  // const routesMap = buildRoutesMap(basePath);
 
   const router = new Router();
   const root = process.cwd();
@@ -91,16 +78,16 @@ export async function createServer() {
       return;
     }
     const pathname = new URL(url as string).pathname;
-    const pathName = routesMap.get(pathname);
+    const filePath = getFilePathFromRoute(pathname, `${root}/src/app`);
 
-    if (!pathName) {
+    if (!fs.existsSync(filePath)) {
       ctx.status = 404;
       ctx.body = "404";
-      console.log("not found", pathName);
+      console.log("not found", pathname);
       return;
     }
 
-    ctx.body = pathName;
+    ctx.body = filePath;
   });
 
   router.get(/.*/, async (ctx) => {
@@ -111,30 +98,22 @@ export async function createServer() {
         throw Error("failed to determine the path you are looking for");
       }
 
-      const pathName = routesMap.get(url);
+      const pathname = ctx.URL.pathname;
+      const filePath = getFilePathFromRoute(pathname, `${root}/src/app`);
 
-      if (!pathName) {
+      if (!fs.existsSync(filePath)) {
         ctx.body = "404";
         return;
       }
-
       let App: React.FC;
+      const { render } = (await viteRuntime.executeEntrypoint(
+        path.resolve(__dirname, "../utils/server-entry.js")
+      )) as {
+        render: (app: React.FC<{}>, path: string) => Promise<PipeableStream>;
+      };
 
-      const { render } = isProduction
-        ? await viteRuntime.executeEntrypoint(
-            path.resolve(__dirname, "../utils/server-entry.mjs")
-          )
-        : ((await viteRuntime.executeEntrypoint(
-            path.resolve(__dirname, "../utils/server-entry.tsx")
-          )) as {
-            render: (
-              app: React.FC<{}>,
-              path: string
-            ) => Promise<PipeableStream>;
-          });
-
-      if (pathName.endsWith(".mdx")) {
-        const mdxString = fs.readFileSync(pathName, "utf-8");
+      if (filePath.endsWith(".mdx")) {
+        const mdxString = fs.readFileSync(filePath, "utf-8");
         const { content, data: frontMatter } = matter(mdxString);
         App = () => MarkdownContent({ markdown: content });
 
@@ -146,14 +125,14 @@ export async function createServer() {
         });
       } else {
         const { default: Page } = (await viteRuntime.executeEntrypoint(
-          pathName
+          filePath
         )) as {
           default: React.FC<{}>;
         };
         App = Page;
       }
 
-      const appHtml = await render(App, pathName);
+      const appHtml = await render(App, filePath);
 
       ctx.type = "text/html";
       const passThrough = new PassThrough();
