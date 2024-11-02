@@ -1,20 +1,6 @@
-import React from "react";
-import { Root } from "react-dom/client";
-
-export let RouterContext: React.Context<{ root: Root | undefined }> | undefined;
-
-//@ts-ignore
-if (!import.meta.env?.SSR) {
-  RouterContext = React.createContext<{ root: Root | undefined }>({
-    root: undefined,
-  });
-}
-
-let routeChanged: CustomEvent<unknown>;
 let updatePageEvent: CustomEvent<unknown>;
 
 if (typeof window !== "undefined") {
-  routeChanged = new CustomEvent("routeChanged");
   updatePageEvent = new CustomEvent("updatePage");
 }
 

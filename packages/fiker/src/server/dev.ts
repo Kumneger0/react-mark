@@ -2,7 +2,13 @@
 import Koa from "koa";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
-import { createViteRuntime, createServer as createViteServer } from "vite";
+import {
+  createViteRuntime,
+  createServer as createViteServer,
+  build,
+} from "vite";
+
+import { spawnSync } from "child_process";
 
 import Router from "@koa/router";
 import react from "@vitejs/plugin-react";
@@ -15,9 +21,8 @@ import { createRequire } from "module";
 import type { PipeableStream } from "react-dom/server";
 import { PassThrough } from "stream";
 import { ViteRuntime } from "vite/runtime";
-import { buildRoutesMap, ContextProvider } from "../utils/utils";
 import { MarkdownContent } from "../utils/markdownContent";
-import { RouterContext } from "../router";
+import { buildRoutesMap } from "../utils/utils";
 
 const req = createRequire(import.meta.url);
 const koaConnect = req("koa-connect");
@@ -38,8 +43,16 @@ export async function createServer() {
   const vite = await createViteServer({
     server: { middlewareMode: true },
     appType: "custom",
-    plugins: [react()],
+    plugins: [react({ include: "mdx" })],
+    build: {
+      ssrManifest: true,
+      ssr: true,
+      rollupOptions: {
+        input: path.resolve(__dirname, "../utils/server-entry.tsx"),
+      },
+    },
   });
+
   const viteRuntime = await createViteRuntime(vite);
   const app = new Koa();
   app.use(koaConnect(vite.middlewares));
@@ -88,52 +101,6 @@ export async function createServer() {
     }
 
     ctx.body = pathName;
-    return;
-
-    const { render } = isProduction
-      ? await viteRuntime.executeEntrypoint(
-          path.resolve(__dirname, "../utils/server-entry.mjs")
-        )
-      : ((await viteRuntime.executeEntrypoint(
-          path.resolve(__dirname, "../utils/server-entry.tsx")
-        )) as {
-          render: (app: React.FC<{}>, path: string) => Promise<PipeableStream>;
-        });
-    const { default: Page } = (await viteRuntime.executeEntrypoint(
-      pathName
-    )) as {
-      default: React.FC<{}>;
-    };
-    const App = ContextProvider({
-      //TODO: fix later
-      //@ts-expect-error
-      contexts: [{ Context: RouterContext, value: null }],
-      //@ts-expect-error
-      children: Page,
-    });
-
-    const appHtml = await render(App, pathName);
-
-    ctx.type = "text/html";
-    const passThrough = new PassThrough();
-    const [before, after] = template.split("<!--ssr-outlet-->");
-
-    passThrough.write(before);
-
-    const writable = new PassThrough({
-      write(chunk, _encoding, callback) {
-        passThrough.write(chunk);
-        callback();
-      },
-      final(callback) {
-        passThrough.write(after);
-        passThrough.end();
-        callback();
-      },
-    });
-
-    appHtml.pipe(writable);
-    ctx.body = passThrough;
   });
 
   router.get(/.*/, async (ctx) => {
@@ -183,13 +150,7 @@ export async function createServer() {
         )) as {
           default: React.FC<{}>;
         };
-        App = ContextProvider({
-          //TODO: fix later
-          //@ts-expect-error
-          contexts: [{ Context: RouterContext, value: null }],
-          //@ts-expect-error
-          children: Page,
-        });
+        App = Page;
       }
 
       const appHtml = await render(App, pathName);

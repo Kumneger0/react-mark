@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "fiker dev",
+    "dev": "pnpm i && fiker dev",
     "build": "fiker build",
     "start": "fiker start",
     "lint": "fiker lint"

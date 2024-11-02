@@ -1,6 +1,5 @@
-import { StrictMode, useContext, useEffect, useRef } from "react";
-import { createRoot, hydrateRoot, Root } from "react-dom/client";
-import { RouterContext } from "../router";
+import { StrictMode } from "react";
+import { hydrateRoot } from "react-dom/client";
 
 declare global {
   interface Window {
@@ -21,69 +20,34 @@ async function hydrate() {
       (module) => module.default
     );
 
-    const AppWrapper = () => {
-      const rootRef = useRef<Root>();
-
-      useEffect(() => {
-        const abortController = new AbortController();
-
-        const updatePage = async () => {
-          const response = await fetch(`/ssr?url=${window.location.href}`);
-          const path = await response.text();
-
-          const App = await import(/* @vite-ignore */ path).then(
-            (module) => module.default
-          );
-
-          rootRef.current?.render(<App />);
-        };
-
-        window.addEventListener(
-          "updatePage",
-          async () => {
-            await updatePage();
-          },
-
-          { signal: abortController.signal }
-        );
-
-        window.addEventListener("popstate", async function (event) {
-          console.log("Back button clicked or navigation detected.");
-          await updatePage();
-        });
-
-        return () => {
-          abortController.abort();
-        };
-      }, []);
-
-      if (!rootRef.current) {
-        rootRef.current = hydrateRoot(
-          document.getElementById("root")!,
-          <StrictMode>
-            {RouterContext && (
-              <RouterContext.Provider value={{ root: rootRef.current }}>
-                <App />
-              </RouterContext.Provider>
-            )}
-          </StrictMode>
-        );
-      }
-
-      return null;
-    };
-
-    createRoot(document.getElementById("root")!).render(
+    const root = hydrateRoot(
+      document.getElementById("root")!,
       <StrictMode>
-        <AppWrapper />
+        <App />
       </StrictMode>
     );
+
+    const updatePage = async () => {
+      const response = await fetch(`/ssr?url=${window.location.href}`);
+      const path = await response.text();
+
+      const App = await import(/* @vite-ignore */ path).then(
+        (module) => module.default
+      );
+
+      root?.render(<App />);
+    };
+
+    window.addEventListener("popstate", async function (event) {
+      await updatePage();
+    });
+
+    window.addEventListener("updatePage", async () => {
+      await updatePage();
+    });
   }
+
+  return null;
 }
 
 hydrate();
-
-const updateContent = (App: React.FC<{}>) => {
-  const value = useContext(RouterContext!);
-  console.log("root", value.root);
-};
