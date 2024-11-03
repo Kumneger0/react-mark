@@ -1,5 +1,5 @@
 function NewPath() {
-  return <div>this is awesome </div>;
+	return <div>this is awesome </div>;
 }
 
 export default NewPath;
