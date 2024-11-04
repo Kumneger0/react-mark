@@ -1,6 +1,6 @@
 import React, { useEffect, ReactNode } from 'react';
 import Prism from 'prismjs';
-import 'prismjs/themes/prism.css';
+import 'prismjs/themes/prism-dark.css';
 interface CodeBlockProps {
 	children: string;
 	language?: string;
@@ -36,15 +36,17 @@ const Quote: React.FC<QuoteProps> = ({ children }) => (
 	</blockquote>
 );
 
-interface HeadingProps {
+interface HeadingProps extends React.AllHTMLAttributes<HTMLHeadingElement> {
 	level: 1 | 2 | 3 | 4 | 5 | 6;
 	children: ReactNode;
 }
 
-const Heading: React.FC<HeadingProps> = ({ level, children }) => {
-	const Tag = `h${level}` as keyof JSX.IntrinsicElements;
+const Heading: React.FC<HeadingProps> = ({ level, children, ...props }) => {
+	const Tag = `h${level}` as unknown as HTMLHeadingElement;
 	return (
+		//@ts-ignore
 		<Tag
+			{...props}
 			style={{
 				marginTop: '1.5em',
 				color: '#333'

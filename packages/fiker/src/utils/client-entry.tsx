@@ -33,15 +33,24 @@ async function hydrate() {
 
 		const updatePage = async () => {
 			const response = await fetch(`/ssr?url=${window.location.href}`);
-			const path = await response.text();
+			const { __FIKER_MDX_COMPONENTS_PATH, __FIKER_PAGE_PATH } = (await response.json()) as {
+				__FIKER_PAGE_PATH: string;
+				__FIKER_MDX_COMPONENTS_PATH: string;
+			};
 
-			const App = await import(/* @vite-ignore */ path).then((module) => module.default);
+			const App = await import(/* @vite-ignore */ __FIKER_PAGE_PATH).then(
+				(module) => module.default
+			);
 
-			root?.render(<App />);
+			const { MDXComponents } = (await import(__FIKER_MDX_COMPONENTS_PATH)) as {
+				MDXComponents: Record<string, unknown>;
+			};
+
+			root?.render(<App components={MDXComponents} />);
 		};
 
 		window.addEventListener('popstate', async function (event) {
-			await updatePage();
+				await updatePage();
 		});
 
 		window.addEventListener('updatePage', async () => {

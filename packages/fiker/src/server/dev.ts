@@ -10,7 +10,7 @@ import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { PipeableStream } from 'react-dom/server';
 import { PassThrough } from 'stream';
-import { createViteRuntime, createServer as createViteServer } from 'vite';
+import { createViteRuntime, createServer as createViteServer, ViteDevServer } from 'vite';
 import { getFilePathFromRoute, processMdxFile } from '../utils/utils.js';
 import { RenderArgs } from '../utils/server-entry.js';
 
@@ -19,33 +19,27 @@ const koaConnect = req('koa-connect');
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const staticDir = path.join(__dirname, '__static__');
-const isProduction = process.env.NODE_ENV == 'production';
 const clientEntry = path.resolve(__dirname, `../utils/client-entry.js`);
+const root = process.cwd();
+export const basePath = path.join(root, 'src/app');
+const fikerDir = path.join(root, '.fiker');
+const isProduction = process.env.NODE_ENV == 'production';
+
+export let vite: ViteDevServer;
 
 export async function createServer() {
-	const vite = await createViteServer({
+	vite = await createViteServer({
 		server: { middlewareMode: true },
 		appType: 'custom',
-		plugins: [react()],
-		build: {
-			ssrManifest: true,
-			ssr: true,
-			rollupOptions: {
-				input: path.resolve(__dirname, '../utils/server-entry.js')
-			}
-		}
+		plugins: [react()]
 	});
 
 	const viteRuntime = await createViteRuntime(vite);
 	const app = new Koa();
 	app.use(koaConnect(vite.middlewares));
 	app.use(mount('/__static__', serve(staticDir)));
-	const root = process.cwd();
-	const basePath = path.join(root, 'src/app');
-	const fikerDir = path.join(root, '.fiker');
 
 	const router = new Router();
-
 	let template = isProduction
 		? await fs.promises.readFile(path.resolve(root, 'dist/client/index.html'), 'utf-8')
 		: fs.readFileSync(path.resolve(root, 'index.html'), 'utf-8');
@@ -55,6 +49,8 @@ export async function createServer() {
 	const ssrManifest = isProduction
 		? await fs.promises.readFile(path.resolve(root, 'dist/client/.vite/ssr-manifest.json'), 'utf-8')
 		: undefined;
+
+	const __FIKER_MDX_COMPONENTS_PATH = path.resolve(__dirname, '../utils/markdown/components.js');
 
 	router.get('/ssr', async (ctx) => {
 		const { url } = ctx.query;
@@ -74,7 +70,24 @@ export async function createServer() {
 			return;
 		}
 		const { path, isMdx } = filePath;
-		ctx.body = path;
+		ctx.type = 'application/json';
+		if (isMdx) {
+			const { Page, filePath, frontMatter } = await processMdxFile({
+				fikerDir,
+				pagePath: path,
+				pathname,
+				viteRuntime
+			});
+			ctx.body = {
+				__FIKER_PAGE_PATH: filePath,
+				__FIKER_MDX_COMPONENTS_PATH
+			};
+			return;
+		}
+		ctx.body = {
+			__FIKER_PAGE_PATH: path,
+			__FIKER_MDX_COMPONENTS_PATH
+		};
 	});
 
 	router.get(/.*/, async (ctx) => {
@@ -94,9 +107,7 @@ export async function createServer() {
 				return;
 			}
 			const { isMdx, path: pagePath } = filePath;
-
 			let __FIKER_PAGE_PROPS: Record<string, unknown> = {};
-
 			const __FIKER_MDX_COMPONENTS_PATH = path.resolve(
 				__dirname,
 				'../utils/markdown/components.js'

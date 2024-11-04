@@ -9,7 +9,7 @@ import { ViteRuntime } from 'vite/runtime';
 import rehypeSlug from 'rehype-slug';
 import rehypeAutolinkHeadings from 'rehype-autolink-headings';
 
-const compileToJsx = async (content: string) => {
+export const compileToJsx = async (content: string) => {
 	const compiled = await compile(content, {
 		rehypePlugins: [rehypeSlug, rehypeAutolinkHeadings]
 	});
@@ -19,27 +19,35 @@ const compileToJsx = async (content: string) => {
 export function buildRoutesMap(dir: string, basePath = '') {
 	const routesMap = new Map<string, string>();
 
-	function traverse(currentDir: string, currentRoute: string) {
+	const processFile = (fullPath: string, currentRoute: string, file: string) => {
+		if (file === 'page.tsx') {
+			routesMap.set(currentRoute || '/', fullPath);
+			return;
+		}
+
+		if (file.endsWith('.mdx')) {
+			const routePath = `${currentRoute}/${file.replace('.mdx', '')}`;
+			routesMap.set(routePath, fullPath);
+		}
+	};
+
+	const traverseDirectory = (currentDir: string, currentRoute: string) => {
 		const files = fs.readdirSync(currentDir);
 
-		for (const file of files) {
+		files.forEach((file) => {
 			const fullPath = path.join(currentDir, file);
 			const fileStat = fs.statSync(fullPath);
 
 			if (fileStat.isDirectory()) {
-				traverse(fullPath, `${currentRoute}/${file}`);
-			} else if (file.endsWith('.tsx') || file.endsWith('.mdx')) {
-				const routePath =
-					file === 'page.tsx'
-						? currentRoute || '/'
-						: `${currentRoute}/${file.replace(/\.(tsx|mdx)$/, '')}`;
-
-				routesMap.set(routePath, fullPath);
+				traverseDirectory(fullPath, `${currentRoute}/${file}`);
+				return;
 			}
-		}
-	}
 
-	traverse(dir, basePath);
+			processFile(fullPath, currentRoute, file);
+		});
+	};
+
+	traverseDirectory(dir, basePath);
 	return routesMap;
 }
 
@@ -82,8 +90,7 @@ export const processMdxFile = async ({
 		fs.mkdirSync(dirToSaveCompiledMdx, { recursive: true });
 	}
 
-	const fileNameToWrite =
-		pagePath.split('/').at(-1)?.replace('mdx', 'tsx') ?? path.join(pathname, '.mdx');
+	const fileNameToWrite = pagePath.split('/').at(-1)?.replace('mdx', 'tsx')!;
 	const filePath = path.join(dirToSaveCompiledMdx, fileNameToWrite);
 	fs.writeFileSync(filePath, compiledJsxContent);
 	const { default: Page } = (await viteRuntime.executeEntrypoint(filePath)) as {
