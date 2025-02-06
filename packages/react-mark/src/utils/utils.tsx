@@ -93,9 +93,7 @@ export const processMdxFile = async ({
 	const fileNameToWrite = pagePath.split('/').at(-1)?.replace('mdx', 'tsx')!;
 	const filePath = path.join(dirToSaveCompiledMdx, fileNameToWrite);
 	fs.writeFileSync(filePath, compiledJsxContent);
-	// const { default: Page } = (await viteRuntime.executeEntrypoint(filePath)) as {
-	// 	default: React.FC<{}>;
-	// };
+
 	const { default: Page } = (await vite.ssrLoadModule(filePath)) as {
 		default: React.FC<{}>;
 	};

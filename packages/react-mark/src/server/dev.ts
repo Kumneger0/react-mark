@@ -33,7 +33,6 @@ export async function createServer() {
 		appType: 'custom',
 		plugins: [react()]
 	});
-	// const viteRuntime = await createViteRuntime(vite);
 	const app = new Koa();
 	app.use(koaConnect(vite.middlewares));
 	app.use(mount('/__static__', serve(staticDir)));
@@ -113,11 +112,7 @@ export async function createServer() {
 			);
 
 			let App: React.FC;
-			// const { render } = (await viteRuntime.executeEntrypoint(
-			// 	path.resolve(__dirname, '../utils/server-entry.js')
-			// )) as {
-			// 	render: (arg: RenderArgs<typeof App>) => Promise<PipeableStream>;
-			// };
+
 			const { render } = (await vite.ssrLoadModule(
 				path.resolve(__dirname, '../utils/server-entry.js')
 			)) as {
@@ -125,14 +120,6 @@ export async function createServer() {
 			};
 
 			if (isMdx) {
-				// const { MDXComponents } = await viteRuntime.executeEntrypoint(__REACT_MARK_COMPONENTS_PATH);
-				// __REACT_MARK_PROPS = { components: MDXComponents } as any;
-				// const { Page, frontMatter, filePath } = await processMdxFile({
-				// 	reactMarkDir,
-				// 	pagePath,
-				// 	pathname,
-				// 	viteRuntime
-				// });
 				const { MDXComponents } = await vite.ssrLoadModule(__REACT_MARK_COMPONENTS_PATH);
 				__REACT_MARK_PROPS = { components: MDXComponents } as any;
 				const { Page, frontMatter, filePath } = await processMdxFile({
@@ -150,9 +137,7 @@ export async function createServer() {
 					description: frontMatter.description
 				});
 			} else {
-				// const { default: Page } = (await viteRuntime.executeEntrypoint(pagePath)) as {
-				// 	default: React.FC<{}>;
-				// };
+
 				const { default: Page } = (await vite.ssrLoadModule(pagePath)) as {
 					default: React.FC<{}>;
 				};
@@ -166,13 +151,10 @@ export async function createServer() {
 					bootstrapData: {
 						__REACT_MARK_COMPONENTS_PATH,
 						__REACT_MARK_PATH,
-						__REACT_MARK_PROPS: __REACT_MARK_PROPS as any
+						__REACT_MARK_PROPS: __REACT_MARK_PROPS as unknown as string
 					}
 				}
 			});
-
-
-
 			ctx.type = 'text/html';
 			const passThrough = new PassThrough();
 
