@@ -1,4 +1,4 @@
-import Link from '@repo/fiker/link';
+import Link from '@repo/react-mark/link';
 import { useEffect } from 'react';
 
 export default function Home() {
@@ -37,7 +37,7 @@ export default function Home() {
 						marginBottom: '1.5rem'
 					}}
 				>
-					Fiker
+					React Mark
 				</h1>
 				<title>this is title</title>
 				<p
@@ -46,7 +46,7 @@ export default function Home() {
 						marginBottom: '2rem'
 					}}
 				>
-					Fiker means "Love" in Amharic - A Static Site Generator Built with Love
+					React Mark - A Static Site Generator Built with Love
 				</p>
 				<p
 					style={{
@@ -138,7 +138,7 @@ export default function Home() {
 						textDecoration: 'none'
 					}}
 				>
-					Learn More About Fiker
+					Learn More About React Mark
 				</Link>
 			</div>
 		</div>

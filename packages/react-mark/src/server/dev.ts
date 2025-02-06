@@ -10,7 +10,7 @@ import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { PipeableStream } from 'react-dom/server';
 import { PassThrough } from 'stream';
-import { createViteRuntime, createServer as createViteServer, ViteDevServer } from 'vite';
+import { createServer as createViteServer, ViteDevServer } from 'vite';
 import { getFilePathFromRoute, processMdxFile } from '../utils/utils.js';
 import { RenderArgs } from '../utils/server-entry.js';
 
@@ -22,7 +22,7 @@ const staticDir = path.join(__dirname, '__static__');
 const clientEntry = path.resolve(__dirname, `../utils/client-entry.js`);
 const root = process.cwd();
 export const basePath = path.join(root, 'src/app');
-const fikerDir = path.join(root, '.fiker');
+const reactMarkDir = path.join(root, '.react-mark');
 const isProduction = process.env.NODE_ENV == 'production';
 
 export let vite: ViteDevServer;
@@ -33,8 +33,7 @@ export async function createServer() {
 		appType: 'custom',
 		plugins: [react()]
 	});
-
-	const viteRuntime = await createViteRuntime(vite);
+	// const viteRuntime = await createViteRuntime(vite);
 	const app = new Koa();
 	app.use(koaConnect(vite.middlewares));
 	app.use(mount('/__static__', serve(staticDir)));
@@ -50,7 +49,7 @@ export async function createServer() {
 		? await fs.promises.readFile(path.resolve(root, 'dist/client/.vite/ssr-manifest.json'), 'utf-8')
 		: undefined;
 
-	const __FIKER_MDX_COMPONENTS_PATH = path.resolve(__dirname, '../utils/markdown/components.js');
+	const __REACT_MARK_COMPONENTS_PATH = path.resolve(__dirname, '../utils/markdown/components.js');
 
 	router.get('/ssr', async (ctx) => {
 		const { url } = ctx.query;
@@ -73,27 +72,27 @@ export async function createServer() {
 		ctx.type = 'application/json';
 		if (isMdx) {
 			const { Page, filePath, frontMatter } = await processMdxFile({
-				fikerDir,
+				reactMarkDir,
 				pagePath: path,
 				pathname,
-				viteRuntime
+				vite
 			});
 			ctx.body = {
-				__FIKER_PAGE_PATH: filePath,
-				__FIKER_MDX_COMPONENTS_PATH
+				__REACT_MARK_PATH: filePath,
+				__REACT_MARK_COMPONENTS_PATH
 			};
 			return;
 		}
 		ctx.body = {
-			__FIKER_PAGE_PATH: path,
-			__FIKER_MDX_COMPONENTS_PATH
+			__REACT_MARK_PATH: path,
+			__REACT_MARK_COMPONENTS_PATH
 		};
 	});
 
 	router.get(/.*/, async (ctx) => {
 		try {
 			const url = ctx.req.url;
-			let __FIKER_PAGE_PATH = '';
+			let __REACT_MARK_PATH = '';
 
 			if (!url) {
 				throw Error('failed to determine the path you are looking for');
@@ -107,29 +106,43 @@ export async function createServer() {
 				return;
 			}
 			const { isMdx, path: pagePath } = filePath;
-			let __FIKER_PAGE_PROPS: Record<string, unknown> = {};
-			const __FIKER_MDX_COMPONENTS_PATH = path.resolve(
+			let __REACT_MARK_PROPS: Record<string, unknown> = {};
+			const __REACT_MARK_COMPONENTS_PATH = path.resolve(
 				__dirname,
 				'../utils/markdown/components.js'
 			);
 
 			let App: React.FC;
-			const { render } = (await viteRuntime.executeEntrypoint(
+			// const { render } = (await viteRuntime.executeEntrypoint(
+			// 	path.resolve(__dirname, '../utils/server-entry.js')
+			// )) as {
+			// 	render: (arg: RenderArgs<typeof App>) => Promise<PipeableStream>;
+			// };
+			const { render } = (await vite.ssrLoadModule(
 				path.resolve(__dirname, '../utils/server-entry.js')
 			)) as {
 				render: (arg: RenderArgs<typeof App>) => Promise<PipeableStream>;
 			};
+
 			if (isMdx) {
-				const { MDXComponents } = await viteRuntime.executeEntrypoint(__FIKER_MDX_COMPONENTS_PATH);
-				__FIKER_PAGE_PROPS = { components: MDXComponents } as any;
+				// const { MDXComponents } = await viteRuntime.executeEntrypoint(__REACT_MARK_COMPONENTS_PATH);
+				// __REACT_MARK_PROPS = { components: MDXComponents } as any;
+				// const { Page, frontMatter, filePath } = await processMdxFile({
+				// 	reactMarkDir,
+				// 	pagePath,
+				// 	pathname,
+				// 	viteRuntime
+				// });
+				const { MDXComponents } = await vite.ssrLoadModule(__REACT_MARK_COMPONENTS_PATH);
+				__REACT_MARK_PROPS = { components: MDXComponents } as any;
 				const { Page, frontMatter, filePath } = await processMdxFile({
-					fikerDir,
+					reactMarkDir,
 					pagePath,
 					pathname,
-					viteRuntime
+					vite
 				});
 				App = Page;
-				__FIKER_PAGE_PATH = filePath;
+				__REACT_MARK_PATH = filePath;
 
 				const comipledTemplate = Handlebars.compile(template);
 				template = comipledTemplate({
@@ -137,23 +150,29 @@ export async function createServer() {
 					description: frontMatter.description
 				});
 			} else {
-				const { default: Page } = (await viteRuntime.executeEntrypoint(pagePath)) as {
+				// const { default: Page } = (await viteRuntime.executeEntrypoint(pagePath)) as {
+				// 	default: React.FC<{}>;
+				// };
+				const { default: Page } = (await vite.ssrLoadModule(pagePath)) as {
 					default: React.FC<{}>;
 				};
 				App = Page;
-				__FIKER_PAGE_PATH = pagePath;
+				__REACT_MARK_PATH = pagePath;
 			}
 			const appHtml = await render({
 				App,
-				props: __FIKER_PAGE_PROPS,
+				props: __REACT_MARK_PROPS,
 				options: {
 					bootstrapData: {
-						__FIKER_MDX_COMPONENTS_PATH,
-						__FIKER_PAGE_PATH,
-						__FIKER_PAGE_PROPS: __FIKER_PAGE_PROPS as any
+						__REACT_MARK_COMPONENTS_PATH,
+						__REACT_MARK_PATH,
+						__REACT_MARK_PROPS: __REACT_MARK_PROPS as any
 					}
 				}
 			});
+
+
+
 			ctx.type = 'text/html';
 			const passThrough = new PassThrough();
 
@@ -183,9 +202,7 @@ export async function createServer() {
 			ctx.body = 'Internal Server Error';
 		}
 	});
-
 	app.use(router.routes()).use(router.allowedMethods());
-
 	const port = 3000;
 	const server = app.listen(port, () => console.log(`Server running at http://localhost:${port}`));
 	server.on('error', (err) => {

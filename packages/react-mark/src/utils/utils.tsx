@@ -4,10 +4,10 @@ import React from 'react';
 
 import { compile } from '@mdx-js/mdx';
 import matter from 'gray-matter';
-import { ViteRuntime } from 'vite/runtime';
 
 import rehypeSlug from 'rehype-slug';
 import rehypeAutolinkHeadings from 'rehype-autolink-headings';
+import { ViteDevServer } from 'vite';
 
 export const compileToJsx = async (content: string) => {
 	const compiled = await compile(content, {
@@ -71,20 +71,20 @@ export function getFilePathFromRoute(pathname: string, rootDir: string) {
 }
 
 export const processMdxFile = async ({
-	fikerDir,
+	reactMarkDir,
 	pagePath,
 	pathname,
-	viteRuntime
+	vite
 }: {
 	pagePath: string;
-	fikerDir: string;
+	reactMarkDir: string;
 	pathname: string;
-	viteRuntime: ViteRuntime;
+	vite: ViteDevServer;
 }) => {
 	const mdxString = fs.readFileSync(pagePath, 'utf-8');
 	const { content, data: frontMatter } = matter(mdxString);
 	const compiledJsxContent = await compileToJsx(content);
-	const dirToSaveCompiledMdx = path.join(fikerDir, 'dev');
+	const dirToSaveCompiledMdx = path.join(reactMarkDir, 'dev');
 
 	if (!fs.existsSync(dirToSaveCompiledMdx)) {
 		fs.mkdirSync(dirToSaveCompiledMdx, { recursive: true });
@@ -93,7 +93,10 @@ export const processMdxFile = async ({
 	const fileNameToWrite = pagePath.split('/').at(-1)?.replace('mdx', 'tsx')!;
 	const filePath = path.join(dirToSaveCompiledMdx, fileNameToWrite);
 	fs.writeFileSync(filePath, compiledJsxContent);
-	const { default: Page } = (await viteRuntime.executeEntrypoint(filePath)) as {
+	// const { default: Page } = (await viteRuntime.executeEntrypoint(filePath)) as {
+	// 	default: React.FC<{}>;
+	// };
+	const { default: Page } = (await vite.ssrLoadModule(filePath)) as {
 		default: React.FC<{}>;
 	};
 

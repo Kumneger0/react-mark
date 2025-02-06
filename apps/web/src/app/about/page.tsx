@@ -1,5 +1,5 @@
 import React from 'react';
-import Link from '@repo/fiker/link';
+import Link from '@repo/react-mark/link';
 
 export default function About() {
 	return (
@@ -25,7 +25,7 @@ export default function About() {
 						textAlign: 'center'
 					}}
 				>
-					Fiker
+					React Mark
 				</h1>
 
 				<div style={{ marginTop: '2rem' }}>
@@ -124,10 +124,10 @@ export default function About() {
 								marginBottom: '1rem'
 							}}
 						>
-							Why Fiker?
+							Why React Mark?
 						</h2>
 						<p style={{ fontSize: '1.125rem', lineHeight: '1.75' }}>
-							Fiker focuses on generating static sites that are fast, secure, and SEO-friendly. By
+							React Mark focuses on generating static sites that are fast, secure, and SEO-friendly. By
 							generating all pages at build time, we ensure optimal performance and reliability for
 							your content-driven websites.
 						</p>

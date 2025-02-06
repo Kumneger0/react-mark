@@ -15,8 +15,8 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
-    "../../packages/fiker/src/utils/client-entry.tsx",
-    "../../packages/fiker/src/utils/server-entry.tsx"
+    "../../packages/react-mark/src/utils/client-entry.tsx",
+    "../../packages/react-mark/src/utils/server-entry.tsx"
   ],
   "exclude": ["node_modules"]
 }

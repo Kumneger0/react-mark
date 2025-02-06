@@ -3,13 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "pnpm i && fiker dev",
-    "build": "fiker build",
-    "start": "fiker start",
-    "lint": "fiker lint"
+    "dev": "pnpm i && react-mark dev",
+    "build": "react-mark build",
+    "start": "react-mark start",
+    "lint": "react-mark lint"
   },
   "dependencies": {
-    "@repo/fiker": "workspace:*",
+    "@repo/react-mark": "workspace:*",
     "react": "19.0.0-beta-26f2496093-20240514",
     "react-dom": "19.0.0-beta-26f2496093-20240514",
     "vite": "^5.4.10"
